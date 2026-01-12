@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double Pendulum</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #444;
+            background-color: #000;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <button onclick="reset()">Reset</button>
+        <button onclick="toggleTrace()">Toggle Trace</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let r1 = 150;
+        let r2 = 150;
+        let m1 = 20;
+        let m2 = 20;
+        let a1 = Math.PI / 2;
+        let a2 = Math.PI / 2;
+        let a1_v = 0;
+        let a2_v = 0;
+        const g = 1;
+
+        const cx = canvas.width / 2;
+        const cy = 100;
+
+        let showTrace = true;
+        let trace = [];
+        const maxTraceLength = 500;
+
+        function reset() {
+            a1 = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
+            a2 = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
+            a1_v = 0;
+            a2_v = 0;
+            trace = [];
+        }
+
+        function toggleTrace() {
+            showTrace = !showTrace;
+            if (!showTrace) {
+                trace = [];
+            }
+        }
+
+        function drawPendulum() {
+            const x1 = cx + r1 * Math.sin(a1);
+            const y1 = cy + r1 * Math.cos(a1);
+            const x2 = x1 + r2 * Math.sin(a2);
+            const y2 = y1 + r2 * Math.cos(a2);
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (showTrace && trace.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(trace[0].x, trace[0].y);
+                for (let i = 1; i < trace.length; i++) {
+                    const alpha = i / trace.length;
+                    const hue = (i / trace.length) * 360;
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${alpha})`;
+                    ctx.lineTo(trace[i].x, trace[i].y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(trace[i].x, trace[i].y);
+                }
+            }
+
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.arc(x1, y1, m1, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.fillStyle = '#4444ff';
+            ctx.beginPath();
+            ctx.arc(x2, y2, m2, 0, 2 * Math.PI);
+            ctx.fill();
+
+            if (showTrace) {
+                trace.push({x: x2, y: y2});
+                if (trace.length > maxTraceLength) {
+                    trace.shift();
+                }
+            }
+        }
+
+        function updatePhysics() {
+            const num1 = -g * (2 * m1 + m2) * Math.sin(a1);
+            const num2 = -m2 * g * Math.sin(a1 - 2 * a2);
+            const num3 = -2 * Math.sin(a1 - a2) * m2;
+            const num4 = a2_v * a2_v * r2 + a1_v * a1_v * r1 * Math.cos(a1 - a2);
+            const den = r1 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
+            const a1_a = (num1 + num2 + num3 * num4) / den;
+
+            const num5 = 2 * Math.sin(a1 - a2);
+            const num6 = a1_v * a1_v * r1 * (m1 + m2);
+            const num7 = g * (m1 + m2) * Math.cos(a1);
+            const num8 = a2_v * a2_v * r2 * m2 * Math.cos(a1 - a2);
+            const den2 = r2 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
+            const a2_a = (num5 * (num6 + num7 + num8)) / den2;
+
+            a1_v += a1_a;
+            a2_v += a2_a;
+            a1 += a1_v;
+            a2 += a2_v;
+
+            a1_v *= 0.9995;
+            a2_v *= 0.9995;
+        }
+
+        function animate() {
+            updatePhysics();
+            drawPendulum();
+            requestAnimationFrame(animate);
+        }
+
+        reset();
+        animate();
+    </script>
+</body>
+</html>
