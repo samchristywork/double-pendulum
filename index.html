@@ -43,6 +43,18 @@
             font-size: 14px;
             color: #aaa;
         }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-container input[type="range"] {
+            width: 150px;
+            cursor: pointer;
+        }
+        .slider-container label {
+            min-width: 120px;
+        }
     </style>
 </head>
 <body>
@@ -50,124 +62,149 @@
     <div class="controls">
         <button onclick="reset()">Reset</button>
         <button onclick="toggleTrace()">Toggle Trace</button>
+        <div class="slider-container">
+            <label>Pendulums: <span id="pendulumCountDisplay">1</span></label>
+            <input type="range" id="pendulumCount" min="1" max="20" value="1" oninput="updatePendulumCount(this.value)">
+        </div>
     </div>
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        let r1 = 150;
-        let r2 = 150;
-        let m1 = 20;
-        let m2 = 20;
-        let a1 = Math.PI / 2;
-        let a2 = Math.PI / 2;
-        let a1_v = 0;
-        let a2_v = 0;
+        const r1 = 150;
+        const r2 = 150;
+        const m1 = 20;
+        const m2 = 20;
         const g = 1;
 
         const cx = canvas.width / 2;
         const cy = 100;
 
         let showTrace = true;
-        let trace = [];
         const maxTraceLength = 500;
 
+        let numPendulums = 1;
+        let pendulums = [];
+
+        function createPendulum(index) {
+            const hue = (index / numPendulums) * 360;
+            return {
+                a1: Math.PI / 2 + (index * 0.001),
+                a2: Math.PI / 2,
+                a1_v: 0,
+                a2_v: 0,
+                trace: [],
+                color: `hsl(${hue}, 100%, 50%)`
+            };
+        }
+
+        function updatePendulumCount(value) {
+            numPendulums = parseInt(value);
+            document.getElementById('pendulumCountDisplay').textContent = numPendulums;
+            reset();
+        }
+
         function reset() {
-            a1 = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
-            a2 = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
-            a1_v = 0;
-            a2_v = 0;
-            trace = [];
+            pendulums = [];
+            for (let i = 0; i < numPendulums; i++) {
+                pendulums.push(createPendulum(i));
+            }
         }
 
         function toggleTrace() {
             showTrace = !showTrace;
             if (!showTrace) {
-                trace = [];
+                pendulums.forEach(p => p.trace = []);
             }
         }
 
-        function drawPendulum() {
-            const x1 = cx + r1 * Math.sin(a1);
-            const y1 = cy + r1 * Math.cos(a1);
-            const x2 = x1 + r2 * Math.sin(a2);
-            const y2 = y1 + r2 * Math.cos(a2);
-
+        function drawPendulums() {
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            if (showTrace && trace.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(trace[0].x, trace[0].y);
-                for (let i = 1; i < trace.length; i++) {
-                    const alpha = i / trace.length;
-                    const hue = (i / trace.length) * 360;
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${alpha})`;
-                    ctx.lineTo(trace[i].x, trace[i].y);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(trace[i].x, trace[i].y);
-                }
+            if (showTrace) {
+                pendulums.forEach(p => {
+                    if (p.trace.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(p.trace[0].x, p.trace[0].y);
+                        for (let i = 1; i < p.trace.length; i++) {
+                            const alpha = i / p.trace.length;
+                            ctx.strokeStyle = p.color.replace(')', `, ${alpha})`).replace('hsl', 'hsla');
+                            ctx.lineTo(p.trace[i].x, p.trace[i].y);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(p.trace[i].x, p.trace[i].y);
+                        }
+                    }
+                });
             }
-
-            ctx.strokeStyle = '#888';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
 
             ctx.fillStyle = '#fff';
             ctx.beginPath();
             ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
             ctx.fill();
 
-            ctx.fillStyle = '#ff4444';
-            ctx.beginPath();
-            ctx.arc(x1, y1, m1, 0, 2 * Math.PI);
-            ctx.fill();
+            pendulums.forEach(p => {
+                const x1 = cx + r1 * Math.sin(p.a1);
+                const y1 = cy + r1 * Math.cos(p.a1);
+                const x2 = x1 + r2 * Math.sin(p.a2);
+                const y2 = y1 + r2 * Math.cos(p.a2);
 
-            ctx.fillStyle = '#4444ff';
-            ctx.beginPath();
-            ctx.arc(x2, y2, m2, 0, 2 * Math.PI);
-            ctx.fill();
+                ctx.strokeStyle = p.color.replace(')', ', 0.6)').replace('hsl', 'hsla');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
 
-            if (showTrace) {
-                trace.push({x: x2, y: y2});
-                if (trace.length > maxTraceLength) {
-                    trace.shift();
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(x1, y1, 8, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(x2, y2, 8, 0, 2 * Math.PI);
+                ctx.fill();
+
+                if (showTrace) {
+                    p.trace.push({x: x2, y: y2});
+                    if (p.trace.length > maxTraceLength) {
+                        p.trace.shift();
+                    }
                 }
-            }
+            });
         }
 
         function updatePhysics() {
-            const num1 = -g * (2 * m1 + m2) * Math.sin(a1);
-            const num2 = -m2 * g * Math.sin(a1 - 2 * a2);
-            const num3 = -2 * Math.sin(a1 - a2) * m2;
-            const num4 = a2_v * a2_v * r2 + a1_v * a1_v * r1 * Math.cos(a1 - a2);
-            const den = r1 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
-            const a1_a = (num1 + num2 + num3 * num4) / den;
+            pendulums.forEach(p => {
+                const num1 = -g * (2 * m1 + m2) * Math.sin(p.a1);
+                const num2 = -m2 * g * Math.sin(p.a1 - 2 * p.a2);
+                const num3 = -2 * Math.sin(p.a1 - p.a2) * m2;
+                const num4 = p.a2_v * p.a2_v * r2 + p.a1_v * p.a1_v * r1 * Math.cos(p.a1 - p.a2);
+                const den = r1 * (2 * m1 + m2 - m2 * Math.cos(2 * p.a1 - 2 * p.a2));
+                const a1_a = (num1 + num2 + num3 * num4) / den;
 
-            const num5 = 2 * Math.sin(a1 - a2);
-            const num6 = a1_v * a1_v * r1 * (m1 + m2);
-            const num7 = g * (m1 + m2) * Math.cos(a1);
-            const num8 = a2_v * a2_v * r2 * m2 * Math.cos(a1 - a2);
-            const den2 = r2 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
-            const a2_a = (num5 * (num6 + num7 + num8)) / den2;
+                const num5 = 2 * Math.sin(p.a1 - p.a2);
+                const num6 = p.a1_v * p.a1_v * r1 * (m1 + m2);
+                const num7 = g * (m1 + m2) * Math.cos(p.a1);
+                const num8 = p.a2_v * p.a2_v * r2 * m2 * Math.cos(p.a1 - p.a2);
+                const den2 = r2 * (2 * m1 + m2 - m2 * Math.cos(2 * p.a1 - 2 * p.a2));
+                const a2_a = (num5 * (num6 + num7 + num8)) / den2;
 
-            a1_v += a1_a;
-            a2_v += a2_a;
-            a1 += a1_v;
-            a2 += a2_v;
+                p.a1_v += a1_a;
+                p.a2_v += a2_a;
+                p.a1 += p.a1_v;
+                p.a2 += p.a2_v;
 
-            a1_v *= 0.9995;
-            a2_v *= 0.9995;
+                p.a1_v *= 0.9995;
+                p.a2_v *= 0.9995;
+            });
         }
 
         function animate() {
             updatePhysics();
-            drawPendulum();
+            drawPendulums();
             requestAnimationFrame(animate);
         }
 
