@@ -66,16 +66,28 @@
             <label>Pendulums: <span id="pendulumCountDisplay">1</span></label>
             <input type="range" id="pendulumCount" min="1" max="20" value="1" oninput="updatePendulumCount(this.value)">
         </div>
+        <div class="slider-container">
+            <label>Gravity: <span id="gravityDisplay">1.0</span></label>
+            <input type="range" id="gravity" min="0.1" max="3" step="0.1" value="1" oninput="updateGravity(this.value)">
+        </div>
+        <div class="slider-container">
+            <label>Arm 1: <span id="arm1Display">150</span></label>
+            <input type="range" id="arm1" min="50" max="250" value="150" oninput="updateArm1(this.value)">
+        </div>
+        <div class="slider-container">
+            <label>Arm 2: <span id="arm2Display">150</span></label>
+            <input type="range" id="arm2" min="50" max="250" value="150" oninput="updateArm2(this.value)">
+        </div>
     </div>
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        const r1 = 150;
-        const r2 = 150;
+        let r1 = 150;
+        let r2 = 150;
         const m1 = 20;
         const m2 = 20;
-        const g = 1;
+        let g = 1;
 
         const cx = canvas.width / 2;
         const cy = 100;
@@ -102,6 +114,23 @@
             numPendulums = parseInt(value);
             document.getElementById('pendulumCountDisplay').textContent = numPendulums;
             reset();
+        }
+
+        function updateGravity(value) {
+            g = parseFloat(value);
+            document.getElementById('gravityDisplay').textContent = g.toFixed(1);
+        }
+
+        function updateArm1(value) {
+            r1 = parseInt(value);
+            document.getElementById('arm1Display').textContent = r1;
+            pendulums.forEach(p => p.trace = []);
+        }
+
+        function updateArm2(value) {
+            r2 = parseInt(value);
+            document.getElementById('arm2Display').textContent = r2;
+            pendulums.forEach(p => p.trace = []);
         }
 
         function reset() {
